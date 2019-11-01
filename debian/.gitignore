@@ -1,0 +1,6 @@
+*.debhelper*
+*.substvars
+curl-alternative/*
+files
+vyatta-curl-wrapper/*
+vyatta-curl-wrapper-routing-instance/*

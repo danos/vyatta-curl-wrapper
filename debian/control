@@ -1,0 +1,28 @@
+Source: vyatta-curl-wrapper
+Maintainer: Vyatta Package Maintainers <DL-vyatta-help@att.com>
+Section: contrib/net
+Priority: extra
+Standards-Version: 3.9.8
+Build-Depends: config-package-dev (>= 5.0), debhelper (>= 9)
+
+Package: vyatta-curl-wrapper
+Architecture: all
+Depends:
+ curl,
+ curl-alternative,
+ libipc-run3-perl,
+ libtry-tiny-perl,
+ ${misc:Depends},
+ ${perl:Depends}
+Description: Curl wrapper for fetching or pushing URLs on a vrouter.
+ Adds a vyatta-curl-wrapper update-alternatives implementation for
+ curl.
+
+Package: curl-alternative
+Architecture: all
+Depends: curl, ${misc:Depends}
+Provides: ${diverted-files}
+Conflicts: ${diverted-files}
+Description: update-alternative setup for curl
+ This empty package will divert the system's curl binary and install an
+ update-alternatives "curl" symlink into its place.

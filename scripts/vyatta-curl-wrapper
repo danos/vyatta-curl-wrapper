@@ -1,0 +1,65 @@
+#!/usr/bin/perl
+
+# Copyright (c) 2019, AT&T Intellectual Property. All rights reserved.
+# Copyright (c) 2016-2017 by Brocade Communications Systems, Inc.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+
+# Simple curl wrapper to allow scp URLs to work properly in the vrouter
+
+# Set CURL_HOME to use the global, configured known hosts
+# When running in op mode, the process uid is always root,
+# but $HOME, etc. are set to whatever user is running the cli.
+# We only support configuring the global host keys, which has
+# a symlink in modern vrouters at /run/ssh/curl_home.
+# The curl program looks for known_hosts in $CURL_HOME/.ssh/known_hosts and
+# CURL_HOME defaults to the user's home directory.
+
+use strict;
+use warnings;
+
+use IPC::Run3;
+use Try::Tiny;
+
+my $curl_home_base = "/run/ssh";
+
+my $user = $ENV{"VYATTA_CURL_USER"};
+my $pass = $ENV{"VYATTA_CURL_PASS"} // "";
+delete $ENV{"VYATTA_CURL_USER"};
+delete $ENV{"VYATTA_CURL_PASS"};
+
+my $vrf = $ENV{"VYATTA_VRF"};
+if ( defined($vrf) ) {
+    die("Invalid VRF name $vrf\n") if ( $vrf =~ m/\// );
+    $ENV{"CURL_HOME"} = "$curl_home_base/vrf/$vrf/curl_home";
+}
+else {
+    $ENV{"CURL_HOME"} = "$curl_home_base/curl_home";
+}
+
+my $curl_stdin;
+
+# If we have credentials pass them in config file format on STDIN
+# This avoids the potential for leaking the credentials in process listings.
+if ( defined($user) ) {
+
+    # Escape \ and " in username and password
+    $user =~ s/([\\\"])/\\$1/g;
+    $pass =~ s/([\\\"])/\\$1/g;
+
+    $curl_stdin = "user=\"$user:$pass\"\n";
+
+    # Instruct curl to read a config file from STDIN.
+    unshift @ARGV, "-K-";
+}
+
+try {
+    run3 [ "/usr/share/curl-alternative/usr++bin++curl", @ARGV ],
+      defined($curl_stdin) ? \$curl_stdin : undef;
+}
+catch {
+    die "Failed to exec curl: $_";
+};
+
+exit $? >> 8;
